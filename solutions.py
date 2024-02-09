@@ -225,18 +225,59 @@ def plot_annual_population_change(df, country_name):
     plt.show()
 
 # Beräkna befolkningsförändringen
-df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
+# df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
 
 # Visa länderna med störst förändring
-plot_population_change(df_population_change)
+# plot_population_change(df_population_change)
 
 # Fråga användaren efter ett land och visa den årliga förändringen
-country_input = input("Ange ett landsnamn för att se dess befolkningsförändring: ")
-plot_annual_population_change(df_worldpubind, country_input)
+# country_input = input("Ange ett landsnamn för att se dess befolkningsförändring: ")
+# plot_annual_population_change(df_worldpubind, country_input)
 
 
 
 # ------------------------------------------------------------------------------------------------------------------------
-# Uppgift 4
+# Uppgift 5
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
+def analyze_and_plot_city_data(df):
+    # Säkerställ att befolkningskolumnen är numerisk och ta bort rader med NaN i 'population'
+    df['population'] = pd.to_numeric(df['population'], errors='coerce')
+    df.dropna(subset=['population'], inplace=True)
+
+    # Räkna antal städer per land
+    cities_per_country = df['country'].value_counts().rename_axis('country').reset_index(name='number_of_cities')
+
+    # Hitta den största staden per land
+    largest_cities = df.loc[df.groupby('country')['population'].idxmax()]
+
+    # Sammanfoga data för att få den största staden och dess befolkningsstorlek per land
+    cities_data = pd.merge(cities_per_country, largest_cities[['country', 'city', 'population']], on='country')
+
+    # Välj de 10 översta posterna efter antal städer
+    top_cities_data = cities_data.head(10).sort_values('number_of_cities', ascending=False)
+
+    # Skriv ut tabellen
+    print(top_cities_data)
+
+    # Första stapeldiagram för antal städer per land
+    plt.figure(figsize=(12, 6))
+    plt.bar(top_cities_data['country'], top_cities_data['number_of_cities'], color='skyblue')
+    plt.title('Antal städer per land')
+    plt.xlabel('Land')
+    plt.ylabel('Antal städer')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+    # Andra stapeldiagram för största stad och befolkning
+    plt.figure(figsize=(12, 6))
+    plt.bar(top_cities_data['city'], top_cities_data['population'], color='orange')
+    plt.title('Största staden och befolkning per land')
+    plt.xlabel('Stad')
+    plt.ylabel('Befolkning')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+#analyze_and_plot_city_data(df_worldcities)

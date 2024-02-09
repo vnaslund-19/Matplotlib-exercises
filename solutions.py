@@ -14,7 +14,7 @@ df_worldpubind = pd.read_csv('worldpubind.csv', delimiter=';')
 # Uppgift 2
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
-df_cia_factbook['density'] = df_cia_factbook['population'] / df_cia_factbook['area']
+df_cia_factbook['density'] = df_cia_factbook['population'] / df_cia_factbook['area'] # skapar en ny kolumn density
 
 # Ta bort rader där 'density' är inf eller NaN
 df_cia_factbook.replace([np.inf, -np.inf], np.nan, inplace=True)  # Ersätt inf/-inf med NaN
@@ -61,9 +61,9 @@ def menu_option_1(df):
     mean_population = df['population'].mean()
     mean_area = df['area'].mean()
     
-    filtered_countries = df[(df['population'] > mean_population) & 
-                            (df['area'] < mean_area) & 
-                            (df['birth_rate'].between(15, 24)) & 
+    filtered_countries = df[(df['population'] > mean_population) &
+                            (df['area'] < mean_area) &
+                            (df['birth_rate'].between(15, 24)) &
                             (df['life_exp_at_birth'] > 70)]
     
     print(filtered_countries[['country', 'area', 'birth_rate', 'life_exp_at_birth']])
@@ -77,24 +77,39 @@ def menu_option_2(df):
 
 def menu_option_3(df):
     df['population_growth_rate'] = (df['birth_rate'] - df['death_rate'] + df['net_migration_rate'])
-    df['population_change'] = df['population_growth_rate']  # Redan i procent per 1000 invånare
+    df['population_change'] = df['population_growth_rate']  # Antagligen redan i procent per 1000 invånare
     
-    sorted_df = df.sort_values('population_change')
-    filtered_countries = pd.concat([sorted_df.head(5), sorted_df.tail(5)])
+    # Rensa bort rader med NaN i de nya kolumnerna
+    df.dropna(subset=['population_growth_rate', 'population_change'], inplace=True)
+
+    # Sortera df i fallande ordning baserat på 'population_change' för att få de mest negativa förändringarna först
+    sorted_df_desc = df.sort_values('population_change', ascending=True)
+    # Ta de fem första som är de med mest negativ förändring
+    most_negative_change = sorted_df_desc.head(5)
     
+    # Sortera df i stigande ordning för att få de mest positiva förändringarna sist
+    sorted_df_asc = df.sort_values('population_change', ascending=False)
+    # Ta de fem första som är de med mest positiv förändring
+    most_positive_change = sorted_df_asc.head(5)
+    
+    # Konkatenera de två grupperna
+    filtered_countries = pd.concat([most_negative_change, most_positive_change])
+    
+    # Skriv ut de valda länderna och deras förändringsdata
     print(filtered_countries[['country', 'birth_rate', 'death_rate', 'net_migration_rate', 'population_change']])
     
-    # Stapeldiagram
+    # Skapa ett stapeldiagram för de valda länderna
     plt.figure(figsize=(10, 8))
+    # Observera att vi använder 'filtered_countries' direkt eftersom de redan är i rätt ordning
     plt.bar(filtered_countries['country'], filtered_countries['population_change'], color='skyblue')
     plt.xlabel('Länder')
-    plt.ylabel('Befolkningsförändring')
+    plt.ylabel('Befolkningsförändring per 1000 invånare')
     plt.xticks(rotation=45, ha="right")
     plt.title('Befolkningsförändring per Land')
     plt.tight_layout()
     plt.show()
 
-
+"""
 while True:
     print("\nVälj ett alternativ:")
     print("1: Visa länder enligt specifika kriterier")
@@ -115,13 +130,109 @@ while True:
         break
     else:
         print("Ogiltigt val, försök igen.")
-
+"""
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 4
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
+def calculate_population_change(df, year_start, year_end):
+    df['population_change_percent'] = ((df[year_end] - df[year_start]) / df[year_start]) * 100
+    return df
 
+# Funktion för att skriva ut och plotta de länder med störst och minst procentuell förändring
+def plot_population_change(df):
+    largest_decrease = df.nsmallest(5, 'population_change_percent')
+    largest_increase = df.nlargest(5, 'population_change_percent')
+    
+    # Tabell
+    print("De 5 länderna med störst befolkningsminskning:")
+    print(largest_decrease[['Country Name', 'population_change_percent']])
+    print("\nDe 5 länderna med störst befolkningsökning:")
+    print(largest_increase[['Country Name', 'population_change_percent']])
+    
+    # Stapeldiagram för minskning
+    plt.figure(figsize=(10, 8))
+    plt.bar(largest_decrease['Country Name'], largest_decrease['population_change_percent'], color='red')
+    plt.xlabel('Länder')
+    plt.ylabel('Procentuell befolkningsförändring')
+    plt.title('Länder med störst befolkningsminskning 1960-2021')
+    plt.tight_layout()
+    plt.show()
+    
+    # Stapeldiagram för ökning
+    plt.figure(figsize=(10, 8))
+    plt.bar(largest_increase['Country Name'], largest_increase['population_change_percent'], color='green')
+    plt.xlabel('Länder')
+    plt.ylabel('Procentuell befolkningsförändring')
+    plt.title('Länder med störst befolkningsökning 1960-2021')
+    plt.tight_layout()
+    plt.show()
+
+# Uppgift b
+def annual_population_change_chart(df, country_name):
+    country_data = df[df['Country Name'].str.lower() == country_name.lower()].iloc[0]
+    years = [str(year) for year in range(1961, 2022)]
+    annual_changes = [(country_data[year] - country_data[str(int(year)-1)]) / country_data[str(int(year)-1)] * 100 for year in years]
+    
+    # Linjediagram över årlig procentuell förändring
+    plt.figure(figsize=(15, 8))
+    plt.plot(years, annual_changes, marker='o', label='Årlig förändring', color='blue')
+    plt.xlabel('År')
+    plt.ylabel('Procentuell förändring', color='blue')
+    plt.title(f'Årlig procentuell befolkningsförändring för {country_name}')
+    plt.xticks(rotation=45)
+    
+    # Höger y-axel för antal invånare
+    ax2 = plt.twinx()
+    ax2.plot(years, [country_data[year] for year in years], marker='o', label='Folkmängd', color='green')
+    ax2.set_ylabel('Folkmängd', color='green')
+    
+    plt.legend(loc='upper left')
+    plt.tight_layout()
+    plt.show()
+
+def plot_annual_population_change(df, country_name):
+    # Filtrera DataFrame för det valda landet
+    country_data = df[df['Country Name'].str.lower() == country_name.lower()]
+    if country_data.empty:
+        print(f"Landet '{country_name}' hittades inte.")
+        return
+
+    country_data = country_data.iloc[0]  # Ta första raden om det finns flera
+    years = [str(year) for year in range(1961, 2022)]
+    population_values = country_data[years].values
+    population_changes = [(population_values[i] - population_values[i - 1]) / population_values[i - 1] * 100 
+                          for i in range(1, len(population_values))]
+
+    # Skapa linjediagram för den procentuella befolkningsförändringen
+    plt.figure(figsize=(15, 8))
+    plt.plot(years[1:], population_changes, label='Procentuell befolkningsförändring', color='blue')
+    plt.xlabel('År')
+    plt.ylabel('Procentuell befolkningsförändring', color='blue')
+    plt.title(f'Årlig procentuell befolkningsförändring för {country_name} (1961-2021)')
+    plt.xticks(rotation=45)
+    plt.grid(True)
+
+    # Höger y-axel för antalet invånare
+    ax2 = plt.twinx()
+    ax2.plot(years, population_values, label='Antal invånare', color='green')
+    ax2.set_ylabel('Antal invånare', color='green')
+    
+    # Visa båda linjediagrammen
+    plt.legend(loc='upper left')
+    plt.tight_layout()
+    plt.show()
+
+# Beräkna befolkningsförändringen
+df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
+
+# Visa länderna med störst förändring
+plot_population_change(df_population_change)
+
+# Fråga användaren efter ett land och visa den årliga förändringen
+country_input = input("Ange ett landsnamn för att se dess befolkningsförändring: ")
+plot_annual_population_change(df_worldpubind, country_input)
 
 
 

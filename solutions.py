@@ -66,14 +66,24 @@ def menu_option_1(df):
                             (df['birth_rate'].between(15, 24)) &
                             (df['life_exp_at_birth'] > 70)]
     
-    print(filtered_countries[['country', 'area', 'birth_rate', 'life_exp_at_birth']])
+    print(filtered_countries[['country', 'area', 'birth_rate', 'life_exp_at_birth']].to_string(index=False))
 
 def menu_option_2(df):
-    df['internet_user_density'] = (df['internet_users'] / df['population']) * 100000
-    sorted_df = df.sort_values('internet_user_density')
-    filtered_countries = pd.concat([sorted_df.head(5), sorted_df.tail(5)])
+    df['Internet Users per 100K'] = (df['internet_users'] / df['population']) * 100000
     
-    print(filtered_countries[['country', 'population', 'internet_user_density']])
+    # Ta bort rader med NaN i 'Internet Users per 100K'
+    df_filtered = df.dropna(subset=['Internet Users per 100K'])
+    
+    # Sortera och välj ut de 5 länderna med lägst och högst internetanvändartäthet
+    sorted_df = df_filtered.sort_values('Internet Users per 100K')
+    lowest_density_countries = sorted_df.head(5)
+    highest_density_countries = sorted_df.tail(5)
+    
+    # Skriv ut de valda länderna och deras internetanvändartäthet
+    print("Countries with the lowest number of internet users per 100,000 inhabitants:")
+    print(lowest_density_countries[['country', 'population', 'Internet Users per 100K']].to_string(index=False))
+    print("\nCountries with the highest number of internet users per 100,000 inhabitants:")
+    print(highest_density_countries[['country', 'population', 'Internet Users per 100K']].to_string(index=False))
 
 def menu_option_3(df):
     df['population_growth_rate'] = (df['birth_rate'] - df['death_rate'] + df['net_migration_rate'])
@@ -96,7 +106,7 @@ def menu_option_3(df):
     filtered_countries = pd.concat([most_negative_change, most_positive_change])
     
     # Skriv ut de valda länderna och deras förändringsdata
-    print(filtered_countries[['country', 'birth_rate', 'death_rate', 'net_migration_rate', 'population_change']])
+    print(filtered_countries[['country', 'birth_rate', 'death_rate', 'net_migration_rate', 'population_change']].to_string(index=False))
     
     # Skapa ett stapeldiagram för de valda länderna
     plt.figure(figsize=(10, 8))
@@ -109,28 +119,29 @@ def menu_option_3(df):
     plt.tight_layout()
     plt.show()
 
-"""
-while True:
-    print("\nVälj ett alternativ:")
-    print("1: Visa länder enligt specifika kriterier")
-    print("2: Visa länder baserat på internetanvändare per 100.000 invånare")
-    print("3: Visa länder med mest positiv och negativ befolkningsförändring")
-    print("4: Avsluta programmet")
+
+def menu():
+    while True:
+        print("\nUPPGIFT 3 MENY\nVälj ett alternativ:")
+        print("1: Visa länder enligt specifika kriterier")
+        print("2: Visa länder baserat på internetanvändare per 100.000 invånare")
+        print("3: Visa länder med mest positiv och negativ befolkningsförändring")
+        print("4: Gå ut ur menyn")
     
-    choice = input("Ange ditt val: ")
+        choice = input("Ange ditt val: ")
     
-    if choice == '1':
-        menu_option_1(df_cia_factbook)
-    elif choice == '2':
-        menu_option_2(df_cia_factbook)
-    elif choice == '3':
-        menu_option_3(df_cia_factbook)
-    elif choice == '4':
-        print("Avslutar programmet...")
-        break
-    else:
-        print("Ogiltigt val, försök igen.")
-"""
+        if choice == '1':
+            menu_option_1(df_cia_factbook)
+        elif choice == '2':
+            menu_option_2(df_cia_factbook)
+        elif choice == '3':
+            menu_option_3(df_cia_factbook)
+        elif choice == '4':
+            print("Avslutar programmet...")
+            break
+        else:
+            print("Ogiltigt val, försök igen.")
+
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 4
@@ -147,9 +158,9 @@ def plot_population_change(df):
     
     # Tabell
     print("De 5 länderna med störst befolkningsminskning:")
-    print(largest_decrease[['Country Name', 'population_change_percent']])
+    print(largest_decrease[['Country Name', 'population_change_percent']].to_string(index=False))
     print("\nDe 5 länderna med störst befolkningsökning:")
-    print(largest_increase[['Country Name', 'population_change_percent']])
+    print(largest_increase[['Country Name', 'population_change_percent']].to_string(index=False))
     
     # Stapeldiagram för minskning
     plt.figure(figsize=(10, 8))
@@ -281,3 +292,34 @@ def analyze_and_plot_city_data(df):
     plt.show()
 
 #analyze_and_plot_city_data(df_worldcities)
+    
+# Alla uppgifter:
+
+def main():
+    while True:
+        print("\nSkriv vilken uppgift du vill se lösnigen på")
+        print("Välj ett alternativ: 2, 3, 4a, 4b, 5 eller q för att avsluta programmet")
+        
+    
+        choice = input("Ange ditt val: ")
+    
+        if choice == '2':
+            input_value = input("Ange antal länder (med + för högst och - för lägst) eller ett landsnamn: ")
+            plot_density(df_cia_factbook, input_value)
+        elif choice == '3':
+            menu()
+        elif choice == '4a':
+            df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
+            plot_population_change(df_population_change)
+        elif choice == '4b':
+            country_input = input("Ange ett landsnamn för att se dess befolkningsförändring: ")
+            plot_annual_population_change(df_worldpubind, country_input)
+        elif choice == '5':
+            analyze_and_plot_city_data(df_worldcities)
+        elif choice == 'q':
+            print("Avslutar programmet...")
+            break
+        else:
+            print("Ogiltigt val, försök igen.")
+
+main()

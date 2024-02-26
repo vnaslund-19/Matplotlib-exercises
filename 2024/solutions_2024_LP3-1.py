@@ -154,51 +154,38 @@ except ValueError:
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
 
-def analyze_inflation_by_continent(df_cpi, df_regions):
-    # Merge CPI data with region data to get continent information for each country
-    df_merged = pd.merge(df_cpi, df_regions[['Landskod', 'Kontinent', 'Land']], on='Landskod', how='left')
+# Sammanfoga df_regions och df_cpi för att inkludera landsnamn och kontinenter
+df_combined = pd.merge(df_regions, df_cpi, on='Landskod')
 
-    # Create an empty DataFrame to store the results
-    results = pd.DataFrame()
+# Nu ska vi beräkna medelinflationen per kontinent och hitta de högsta och lägsta värdena per kontinent.
+# Vi kommer att skapa en funktion för att utföra dessa beräkningar och generera den slutliga tabellen.
 
-    # Calculate statistics for each continent
-    for continent in df_merged['Kontinent'].dropna().unique():
-        continent_df = df_merged[df_merged['Kontinent'] == continent]
+def calculate_inflation_stats(df_combined):
+    # Omvandla dataframe till long format för enklare beräkningar
+    df_melted = df_combined.melt(id_vars=['Land', 'Landskod', 'Kontinent'], 
+                                 var_name='År', value_name='Inflation')
 
-        # Calculate the mean inflation for each continent over the years
-        mean_inflation = continent_df.iloc[:, 2:-2].mean(axis=1).mean()
+    # Beräkna medelvärde per kontinent
+    continent_mean = df_melted.groupby('Kontinent')['Inflation'].mean().reset_index(name='Medel')
 
-        # Find the years with the highest and lowest inflation
-        highest_inf = continent_df.iloc[:, 2:-2].max(axis=1)
-        highest_years = highest_inf.idxmax(axis=1)
-        highest_countries = continent_df.loc[highest_inf.idxmax(), 'Land']
+    # Hitta topp 3 högsta och lägsta inflationstal per kontinent
+    top_inflations = df_melted.groupby('Kontinent')['Inflation'].nlargest(3).reset_index()
+    bottom_inflations = df_melted.groupby('Kontinent')['Inflation'].nsmallest(3).reset_index()
 
-        lowest_inf = continent_df.iloc[:, 2:-2].min(axis=1)
-        lowest_years = lowest_inf.idxmin(axis=1)
-        lowest_countries = continent_df.loc[lowest_inf.idxmin(), 'Land']
+    # Få detaljer för dessa topp och botten inflationstal
+    top_details = df_melted.loc[top_inflations['level_1']]
+    bottom_details = df_melted.loc[bottom_inflations['level_1']]
 
-        # Construct the result row
-        result_row = {
-            'Kontinent': continent,
-            'Högst Inf [%]': highest_inf.max(),
-            'Högst År': highest_years[highest_inf.idxmax()],
-            'Högst Land': highest_countries.iloc[0],
-            'Lägst Inf [%]': lowest_inf.min(),
-            'Lägst År': lowest_years[lowest_inf.idxmin()],
-            'Lägst Land': lowest_countries.iloc[0],
-            'Medel Inf [%]': mean_inflation
-        }
+    # Kombinera alla resultat i en tabell
+    result_table = pd.concat([top_details, bottom_details]).sort_values(by=['Kontinent', 'Inflation'])
+    
+    # Lägg till medelvärden i resultattabellen
+    result_table = result_table.merge(continent_mean, on='Kontinent')
 
-        # Append the result
-        results = results.append(result_row, ignore_index=True)
+    print(result_table)
 
-    # Format the results to match the example's layout
-    results = results[['Kontinent', 'Högst Land', 'Högst Inf [%]', 'Högst År', 'Lägst Land', 'Lägst Inf [%]', 'Lägst År', 'Medel Inf [%]']]
-    print(results.to_string(index=False))
-
-analyze_inflation_by_continent(df_cpi, df_regions)
-
-
+# Kör funktionen och visa resultatet
+calculate_inflation_stats(df_combined)
 
 
 # ------------------------------------------------------------------------------------------------------------------------

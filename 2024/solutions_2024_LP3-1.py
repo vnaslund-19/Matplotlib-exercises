@@ -232,22 +232,22 @@ def plot_inflation(df_inflation, df_regions):
     plt.ylabel('Inflation (%)')
     plt.legend()
     plt.grid(True)
+    plt.xticks(rotation=90)
+    plt.tight_layout()
     plt.show()
     
 # Ersätt 'df_inflation' och 'df_regions' med dina faktiska DataFrames när du kör funktionen.
-plot_inflation(df_inflation, df_regions)
+# plot_inflation(df_inflation, df_regions)
 
 
 
 
 
-
-"""
 # Main funktion för att köra koden till uppgifter 2-5
 def main():
     while True:
         print("\nSkriv vilken uppgift du vill se lösnigen på")
-        print("Välj ett alternativ: 2, 3, 4a, 4b, 5 eller q för att avsluta programmet")
+        print("Välj ett alternativ: 2, 3, 4, 5 eller q för att avsluta programmet")
         
     
         choice = input("Ange ditt val: ")
@@ -283,10 +283,9 @@ def main():
             except ValueError:
                 print("Du måste ange ett giltigt år.")
         elif choice == '4':
-            df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
-            plot_population_change(df_population_change)
+            analyze_inflation_by_continent(df_cpi, df_regions)
         elif choice == '5':
-            analyze_and_plot_city_data(df_worldcities)
+            plot_inflation(df_inflation, df_regions)
         elif choice == 'q':
             print("Avslutar programmet...")
             break
@@ -294,4 +293,3 @@ def main():
             print("Ogiltigt val, försök igen.")
 
 main()
-"""

@@ -187,13 +187,55 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
     # Returnera den färdiga tabellen
     print(output.to_string(index=False))
 
-analyze_inflation_by_continent(df_cpi, df_regions)
+#analyze_inflation_by_continent(df_cpi, df_regions)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 5
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
+    
+def plot_inflation(df_inflation, df_regions):
+    # Lägg till en kolumn 'COUNTRY' i df_inflation baserat på df_regions
+    df_inflation = pd.merge(df_inflation, df_regions[['Landskod', 'Land']], left_on='LOCATION', right_on='Landskod')
+    df_inflation.rename(columns={'Land': 'COUNTRY'}, inplace=True)
+    
+    # Användarinmatning
+    country_input = input("Ange vilket land som ska analyseras: ")
+    subject_input = input("Ange vilken subject du vill analysera: ")
+    frequency_input = input("Ange vilken frequency du vill analysera: ")
+    measure_input = input("Ange vilken measure du vill analysera: ")
+    
+    # Filtrera data baserat på användarinmatningen
+    df_filtered = df_inflation[
+        (df_inflation['COUNTRY'].str.upper() == country_input.upper()) &
+        (df_inflation['SUBJECT'].str.upper() == subject_input.upper()) &
+        (df_inflation['FREQUENCY'].str.upper() == frequency_input.upper()) &
+        (df_inflation['MEASURE'].str.upper() == measure_input.upper())
+    ]
+    
+    # Sortera efter 'TIME' för att säkerställa rätt ordning i plotten
+    df_filtered = df_filtered.sort_values(by='TIME')
 
+    # Hitta de fem högsta och lägsta värdena
+    top_5 = df_filtered.nlargest(5, 'Value')
+    bottom_5 = df_filtered.nsmallest(5, 'Value')
+    
+    # Plotta linjediagrammet
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_filtered['TIME'], df_filtered['Value'], label='Inflation', marker='', color='blue', linestyle='-')
+    plt.scatter(top_5['TIME'], top_5['Value'], color='red', label='Top 5', zorder=5)
+    plt.scatter(bottom_5['TIME'], bottom_5['Value'], color='green', label='Bottom 5', zorder=5)
+    
+    # Lägg till titel och etiketter
+    plt.title(f'Inflation för {country_input} - {subject_input} - {measure_input}')
+    plt.xlabel('År')
+    plt.ylabel('Inflation (%)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
+# Ersätt 'df_inflation' och 'df_regions' med dina faktiska DataFrames när du kör funktionen.
+plot_inflation(df_inflation, df_regions)
 
 
 

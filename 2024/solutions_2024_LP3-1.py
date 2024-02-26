@@ -23,31 +23,43 @@ df_cpi_extended = pd.merge(df_regions[['Land', 'Landskod', 'Kontinent']], df_cpi
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
 
-def plot_cpi_for_countries(df, countries):
-    existing_countries = [country for country in countries if country in df['Land'].values]
+def plot_cpi_for_countries(df, possible_countries):
+    countries = [country for country in possible_countries if country in df['Land'].values]
     
-    # Kontrollera om listan med existerande länder är tom efter borttagning
-    if not existing_countries:
+    # Kontrollera om listan med existerande länder är tom efter rensning
+    if not countries:
         print("Ingen giltig data hittades för de angivna länderna. Ingen graf visas.")
         return
 
     try:
         plt.figure(figsize=(14, 7))
-        for country in existing_countries:
+        for country in countries:
             country_data = df[df['Land'] == country]
-            years = list(map(str, range(1960, 2023)))
-            cpi_values = country_data.iloc[0][years].values
-            
-            plt.plot(years, cpi_values, label=country, marker='o')
+            years = list(map(str, range(1960, 2023))) 
+            cpi_values = country_data.iloc[0][years].dropna().astype(float).values # Radera ogiltig data
+
+            if len(years) != len(cpi_values):
+                print(f"Nödvändig data saknas för {country}.")
+                continue  # Hoppar över den här iterationen och fortsätter med nästa land
+    
+            plt.plot(years, cpi_values, label=country)
+    
+            # Markera största och minsta värdet
+            max_value = np.nanmax(cpi_values)
+            min_value = np.nanmin(cpi_values)
+            max_year = years[np.nanargmax(cpi_values)]
+            min_year = years[np.nanargmin(cpi_values)]
+    
+            plt.scatter(max_year, max_value, color='red')  
+            plt.scatter(min_year, min_value, color='blue')
         
         plt.title('Inflation under tidsperioden 1960-2022')
         plt.xlabel('År')
         plt.ylabel('CPI')
-        if existing_countries:  # Kontrollera om det finns länder att lägga till i legenden
-            plt.legend()
+        plt.legend()
         plt.grid(True)
-        plt.xticks(rotation=90)  # Roterar årtalen vertikalt
-        plt.tight_layout()  # Justerar layouten så att allt får plats
+        plt.xticks(rotation=90)
+        plt.tight_layout()
         plt.show()
     except Exception as e:
         print(f"Ett fel uppstod: {e}")
@@ -62,43 +74,20 @@ def plot_inflation_change_factor(df, country):
         try:
             inflation_values = country_data.iloc[0][years].astype(float).values
             change_factors = [(inflation_values[i] - inflation_values[i - 1]) / inflation_values[i - 1] * 100 
-                              for i in range(1, len(inflation_values))]
+                              for i in range(1, len(inflation_values))] # Kalkyl för förändringsfaktorer
             plt.figure(figsize=(14, 7))
             plt.bar(years[1:], change_factors, color='skyblue')
-            plt.title(f'Inflation Change Factors for {country.title()} (1961-2022)')  # Använd 'title()' för att normalisera utseendet på landets namn
+            plt.title(f'Inflation Change Factors for {country.title()} (1961-2022)')
             plt.xlabel('År')
             plt.ylabel('Förändringsfaktor (%)')
-            plt.xticks(rotation=90)  # Roterar årtalen vertikalt
-            plt.tight_layout()  # Justerar layouten så att allt får plats
+            plt.xticks(rotation=90)
+            plt.tight_layout()
             plt.show()
         except Exception as e:
             print(f"Error plotting change factor for {country}: {e}")
     else:
         print(f"No data found for {country}")
-"""
-# Samla in länder för CPI-trendanalys
-countries_to_analyze = []
-print("Ange upp till 3 länder för CPI-trendanalys eller 'END' för att fortsätta.")
-while len(countries_to_analyze) < 3:
-    country_name = input("Ange namnet på landet som du vill analysera: ")
-    if country_name.upper() == 'END':
-        break
-    if df_cpi_extended['Land'].str.contains(country_name, case=False).any():
-        countries_to_analyze.append(country_name)
-    else:
-        print("Landet hittades inte, försök igen.")
 
-# Plotta CPI för de valda länderna
-if countries_to_analyze:
-    plot_cpi_for_countries(df_cpi_extended, countries_to_analyze)
-
-# Fråga användaren efter ett specifikt land för förändringsfaktoranalysen
-change_factor_country = input("Ange namnet på landet som du vill analysera förändringsfaktorn för: ")
-if df_cpi_extended['Land'].str.contains(change_factor_country, case=False).any():
-    plot_inflation_change_factor(df_cpi_extended, change_factor_country)
-else:
-    print("Landet hittades inte för förändringsfaktoranalysen.")
-"""
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 3
 # ------------------------------------------------------------------------------------------------------------------------
@@ -130,7 +119,7 @@ def analyze_inflation_by_year(df, year):
     plt.figure(figsize=(14, 7))
     
     # Plotta kombinerat diagram
-    plt.bar(combined_inflation['Land'], combined_inflation[str(year)], color=['skyblue']*6 + ['darkorange']*6)
+    plt.bar(combined_inflation['Land'], combined_inflation[str(year)], color=['green']*6 + ['red']*6)
     
     plt.title(f'Inflation för år {year}')
     plt.xlabel('Land')
@@ -138,16 +127,6 @@ def analyze_inflation_by_year(df, year):
     plt.xticks(rotation=90)
     plt.tight_layout()
     plt.show()
-
-"""
-# Använd funktionen
-year_to_analyze = input("Ange vilket år som ska analyseras: ")
-try:
-    year_to_analyze = int(year_to_analyze)
-    analyze_inflation_by_year(df_cpi_extended, year_to_analyze)
-except ValueError:
-    print("Du måste ange ett giltigt år.")
-"""
     
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 4
@@ -155,7 +134,8 @@ except ValueError:
 # Skriv din kod här:
 
 def analyze_inflation_by_continent(df_cpi, df_regions):
-    # Konvertera årskolumner till numerisk typ och smält dataframe till ett långt format
+    # Konvertera årskolumner till numerisk typ och smält dataframe till ett långt format och
+    # Omvandla 'wide' format data (en kolumn per år) till 'long' format (en rad per år och landskod)
     years = [str(year) for year in range(1960, 2023)]
     df_cpi_long = df_cpi.melt(id_vars='Landskod', value_vars=years, var_name='År', value_name='Inflation')
     df_cpi_long['Inflation'] = pd.to_numeric(df_cpi_long['Inflation'], errors='coerce')
@@ -177,17 +157,15 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
     # Sortera för att få en snygg output
     extremes_sorted = extremes.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False])
     
-    # Skapa en output dataframe som inkluderar medelinflationen
+    # Skapa en output dataframe som inkluderar medelinflationen för kontinenten
     output = pd.merge(mean_inflation, extremes_sorted, on='Kontinent', how='outer')
 
     # Sortera och organisera kolumnerna
     output = output[['Kontinent', 'Land', 'År', 'Inflation', 'Kontinent avg[%]']]
     output.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False], inplace=True)
     
-    # Returnera den färdiga tabellen
     print(output.to_string(index=False))
 
-#analyze_inflation_by_continent(df_cpi, df_regions)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 5
@@ -198,8 +176,7 @@ def plot_inflation(df_inflation, df_regions):
     # Lägg till en kolumn 'COUNTRY' i df_inflation baserat på df_regions
     df_inflation = pd.merge(df_inflation, df_regions[['Landskod', 'Land']], left_on='LOCATION', right_on='Landskod')
     df_inflation.rename(columns={'Land': 'COUNTRY'}, inplace=True)
-    
-    # Användarinmatning
+
     country_input = input("Ange vilket land som ska analyseras: ")
     subject_input = input("Ange vilken subject du vill analysera: ")
     frequency_input = input("Ange vilken frequency du vill analysera: ")
@@ -235,24 +212,17 @@ def plot_inflation(df_inflation, df_regions):
     plt.xticks(rotation=90)
     plt.tight_layout()
     plt.show()
-    
-# Ersätt 'df_inflation' och 'df_regions' med dina faktiska DataFrames när du kör funktionen.
-# plot_inflation(df_inflation, df_regions)
-
-
-
-
 
 # Main funktion för att köra koden till uppgifter 2-5
 def main():
     while True:
         print("\nSkriv vilken uppgift du vill se lösnigen på")
-        print("Välj ett alternativ: 2, 3, 4, 5 eller q för att avsluta programmet")
+        print("Välj ett alternativ: 2a, 2b, 3, 4, 5 eller q för att avsluta programmet")
         
     
         choice = input("Ange ditt val: ")
     
-        if choice == '2':
+        if choice == '2a':
             # Samla in länder för CPI-trendanalys
             countries_to_analyze = []
             print("Ange upp till 3 länder för CPI-trendanalys eller 'END' för att fortsätta.")
@@ -260,16 +230,11 @@ def main():
                 country_name = input("Ange namnet på landet som du vill analysera: ")
                 if country_name.upper() == 'END':
                     break
-                if df_cpi_extended['Land'].str.contains(country_name, case=False).any():
-                    countries_to_analyze.append(country_name)
-                else:
-                    print("Landet hittades inte, försök igen.")
-
-        # Plotta CPI för de valda länderna
+                countries_to_analyze.append(country_name)
+            # Plotta CPI för de valda länderna om något existerar (input måste matcha landets namn i .csv filen exakt)
             if countries_to_analyze:
                 plot_cpi_for_countries(df_cpi_extended, countries_to_analyze)
-
-        # Fråga användaren efter ett specifikt land för förändringsfaktoranalysen
+        elif choice == '2b':
             change_factor_country = input("Ange namnet på landet som du vill analysera förändringsfaktorn för: ")
             if df_cpi_extended['Land'].str.contains(change_factor_country, case=False).any():
                 plot_inflation_change_factor(df_cpi_extended, change_factor_country)

@@ -165,7 +165,7 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
     df_merged = pd.merge(df_cpi_long, df_regions, on='Landskod')
 
     # Beräkna medelinflationen per kontinent
-    mean_inflation = df_merged.groupby('Kontinent')['Inflation'].mean().reset_index(name='Medel Inf [%]')
+    mean_inflation = df_merged.groupby('Kontinent')['Inflation'].mean().reset_index(name='Kontinent avg[%]')
 
     # Hitta de tre högsta och lägsta inflationerna per kontinent
     top_inflations = df_merged.sort_values('Inflation', ascending=False).groupby('Kontinent').head(3)
@@ -181,11 +181,11 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
     output = pd.merge(mean_inflation, extremes_sorted, on='Kontinent', how='outer')
 
     # Sortera och organisera kolumnerna
-    output = output[['Kontinent', 'Land', 'År', 'Inflation', 'Medel Inf [%]']]
+    output = output[['Kontinent', 'Land', 'År', 'Inflation', 'Kontinent avg[%]']]
     output.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False], inplace=True)
     
     # Returnera den färdiga tabellen
-    print(output)
+    print(output.to_string(index=False))
 
 analyze_inflation_by_continent(df_cpi, df_regions)
 

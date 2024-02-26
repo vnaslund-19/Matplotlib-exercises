@@ -14,6 +14,7 @@ df_regions = pd.read_csv('regions.csv', delimiter=';')
 # Skiljetecknet sätts automatiskt till ',' om inget specificeras
 df_inflation = pd.read_csv('inflation.csv')
 
+df_cpi_extended = pd.merge(df_regions[['Land', 'Landskod', 'Kontinent']], df_cpi, on='Landskod')
 
 
 
@@ -21,7 +22,6 @@ df_inflation = pd.read_csv('inflation.csv')
 # Uppgift 2
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
-df_cpi_extended = pd.merge(df_regions[['Land', 'Landskod', 'Kontinent']], df_cpi, on='Landskod')
 
 def plot_cpi_for_countries(df, countries):
     existing_countries = [country for country in countries if country in df['Land'].values]
@@ -154,39 +154,40 @@ except ValueError:
 # ------------------------------------------------------------------------------------------------------------------------
 # Skriv din kod här:
 
-# Sammanfoga df_regions och df_cpi för att inkludera landsnamn och kontinenter
-df_combined = pd.merge(df_regions, df_cpi, on='Landskod')
+def analyze_inflation_by_continent(df_cpi, df_regions):
+    # Konvertera årskolumner till numerisk typ och smält dataframe till ett långt format
+    years = [str(year) for year in range(1960, 2023)]
+    df_cpi_long = df_cpi.melt(id_vars='Landskod', value_vars=years, var_name='År', value_name='Inflation')
+    df_cpi_long['Inflation'] = pd.to_numeric(df_cpi_long['Inflation'], errors='coerce')
+    df_cpi_long['År'] = df_cpi_long['År'].astype(int)
 
-# Nu ska vi beräkna medelinflationen per kontinent och hitta de högsta och lägsta värdena per kontinent.
-# Vi kommer att skapa en funktion för att utföra dessa beräkningar och generera den slutliga tabellen.
+    # Sammanfoga df_cpi_long och df_regions för att inkludera 'Land' och 'Kontinent'
+    df_merged = pd.merge(df_cpi_long, df_regions, on='Landskod')
 
-def calculate_inflation_stats(df_combined):
-    # Omvandla dataframe till long format för enklare beräkningar
-    df_melted = df_combined.melt(id_vars=['Land', 'Landskod', 'Kontinent'], 
-                                 var_name='År', value_name='Inflation')
+    # Beräkna medelinflationen per kontinent
+    mean_inflation = df_merged.groupby('Kontinent')['Inflation'].mean().reset_index(name='Medel Inf [%]')
 
-    # Beräkna medelvärde per kontinent
-    continent_mean = df_melted.groupby('Kontinent')['Inflation'].mean().reset_index(name='Medel')
+    # Hitta de tre högsta och lägsta inflationerna per kontinent
+    top_inflations = df_merged.sort_values('Inflation', ascending=False).groupby('Kontinent').head(3)
+    bottom_inflations = df_merged.sort_values('Inflation').groupby('Kontinent').head(3)
 
-    # Hitta topp 3 högsta och lägsta inflationstal per kontinent
-    top_inflations = df_melted.groupby('Kontinent')['Inflation'].nlargest(3).reset_index()
-    bottom_inflations = df_melted.groupby('Kontinent')['Inflation'].nsmallest(3).reset_index()
+    # Sammanfoga dessa med mean_inflation för att få en enda dataframe
+    extremes = pd.concat([top_inflations, bottom_inflations], axis=0)
 
-    # Få detaljer för dessa topp och botten inflationstal
-    top_details = df_melted.loc[top_inflations['level_1']]
-    bottom_details = df_melted.loc[bottom_inflations['level_1']]
-
-    # Kombinera alla resultat i en tabell
-    result_table = pd.concat([top_details, bottom_details]).sort_values(by=['Kontinent', 'Inflation'])
+    # Sortera för att få en snygg output
+    extremes_sorted = extremes.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False])
     
-    # Lägg till medelvärden i resultattabellen
-    result_table = result_table.merge(continent_mean, on='Kontinent')
+    # Skapa en output dataframe som inkluderar medelinflationen
+    output = pd.merge(mean_inflation, extremes_sorted, on='Kontinent', how='outer')
 
-    print(result_table)
+    # Sortera och organisera kolumnerna
+    output = output[['Kontinent', 'Land', 'År', 'Inflation', 'Medel Inf [%]']]
+    output.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False], inplace=True)
+    
+    # Returnera den färdiga tabellen
+    print(output)
 
-# Kör funktionen och visa resultatet
-calculate_inflation_stats(df_combined)
-
+analyze_inflation_by_continent(df_cpi, df_regions)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 5
@@ -195,3 +196,60 @@ calculate_inflation_stats(df_combined)
 
 
 
+
+
+
+
+"""
+# Main funktion för att köra koden till uppgifter 2-5
+def main():
+    while True:
+        print("\nSkriv vilken uppgift du vill se lösnigen på")
+        print("Välj ett alternativ: 2, 3, 4a, 4b, 5 eller q för att avsluta programmet")
+        
+    
+        choice = input("Ange ditt val: ")
+    
+        if choice == '2':
+            # Samla in länder för CPI-trendanalys
+            countries_to_analyze = []
+            print("Ange upp till 3 länder för CPI-trendanalys eller 'END' för att fortsätta.")
+            while len(countries_to_analyze) < 3:
+                country_name = input("Ange namnet på landet som du vill analysera: ")
+                if country_name.upper() == 'END':
+                    break
+                if df_cpi_extended['Land'].str.contains(country_name, case=False).any():
+                    countries_to_analyze.append(country_name)
+                else:
+                    print("Landet hittades inte, försök igen.")
+
+        # Plotta CPI för de valda länderna
+            if countries_to_analyze:
+                plot_cpi_for_countries(df_cpi_extended, countries_to_analyze)
+
+        # Fråga användaren efter ett specifikt land för förändringsfaktoranalysen
+            change_factor_country = input("Ange namnet på landet som du vill analysera förändringsfaktorn för: ")
+            if df_cpi_extended['Land'].str.contains(change_factor_country, case=False).any():
+                plot_inflation_change_factor(df_cpi_extended, change_factor_country)
+            else:
+                print("Landet hittades inte för förändringsfaktoranalysen.")
+        elif choice == '3':
+            year_to_analyze = input("Ange vilket år som ska analyseras: ")
+            try:
+                year_to_analyze = int(year_to_analyze)
+                analyze_inflation_by_year(df_cpi_extended, year_to_analyze)
+            except ValueError:
+                print("Du måste ange ett giltigt år.")
+        elif choice == '4':
+            df_population_change = calculate_population_change(df_worldpubind, '1960', '2021')
+            plot_population_change(df_population_change)
+        elif choice == '5':
+            analyze_and_plot_city_data(df_worldcities)
+        elif choice == 'q':
+            print("Avslutar programmet...")
+            break
+        else:
+            print("Ogiltigt val, försök igen.")
+
+main()
+"""

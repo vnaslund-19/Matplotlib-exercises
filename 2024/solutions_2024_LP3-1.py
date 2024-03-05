@@ -1,6 +1,5 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Uppgift 1
@@ -36,7 +35,7 @@ def plot_cpi_for_countries(df, possible_countries):
         for country in countries:
             country_data = df[df['Land'] == country]
             years = list(map(str, range(1960, 2023))) 
-            cpi_values = country_data.iloc[0][years].dropna().astype(float).values # Radera ogiltig data
+            cpi_values = country_data.iloc[0][years].dropna().astype(float) # Radera ogiltig data
 
             if len(years) != len(cpi_values):
                 print(f"Nödvändig data saknas för {country}.")
@@ -45,10 +44,10 @@ def plot_cpi_for_countries(df, possible_countries):
             plt.plot(years, cpi_values, label=country)
     
             # Markera största och minsta värdet
-            max_value = np.nanmax(cpi_values)
-            min_value = np.nanmin(cpi_values)
-            max_year = years[np.nanargmax(cpi_values)]
-            min_year = years[np.nanargmin(cpi_values)]
+            max_value = cpi_values.max()
+            min_value = cpi_values.min()
+            max_year = cpi_values.idxmax()
+            min_year = cpi_values.idxmin()
     
             plt.scatter(max_year, max_value, color='red')  
             plt.scatter(min_year, min_value, color='blue')
@@ -70,7 +69,7 @@ def plot_inflation_change_factor(df, country):
     country_lowercase = country.lower()
     if country_lowercase in df['Land'].str.lower().values:
         country_data = df[df['Land'].str.lower() == country_lowercase]
-        years = list(map(str, range(1961, 2023)))
+        years = list(map(str, range(1960, 2023)))
         try:
             inflation_values = country_data.iloc[0][years].astype(float).values
             change_factors = [(inflation_values[i] - inflation_values[i - 1]) / inflation_values[i - 1] * 100 

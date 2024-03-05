@@ -105,14 +105,21 @@ def analyze_inflation_by_year(df, year):
     lowest_inflation = df_year.nsmallest(6, str(year))
     highest_inflation = df_year.nlargest(6, str(year))
     
-    # Kombinera de två dataramarna och sortera dem från lägst till högst inflation
+    max_country_len = max(lowest_inflation['Land'].apply(len).max(), highest_inflation['Land'].apply(len).max())
+
+    print(f"{'Lägst inflation':<{max_country_len + 20}}{'Högst inflation'}")
+
+    # Iterera över raderna i båda DataFrame för att skriva ut sida vid sida
+    for (low_index, low_row), (high_index, high_row) in zip(lowest_inflation.iterrows(), highest_inflation.iterrows()):
+        country_low = low_row['Land']
+        inflation_low = f"{low_row[str(year)]:.1f}"
+        country_high = high_row['Land']
+        inflation_high = f"{high_row[str(year)]:.1f}"
+        print(f"{country_low:<{max_country_len + 10}}{inflation_low:<10}{country_high:<{max_country_len + 10}}{inflation_high:<10}")
+    
+    
     combined_inflation = pd.concat([lowest_inflation, highest_inflation]).sort_values(by=str(year))
     
-    # Presentera resultaten i tabellform
-    print(f"Länder med lägst inflation år {year}:")
-    print(lowest_inflation[['Land', str(year)]].to_string(index=False))
-    print(f"Länder med högst inflation år {year}:")
-    print(highest_inflation[['Land', str(year)]].to_string(index=False))
     
     # Rita stapeldiagram
     plt.figure(figsize=(14, 7))

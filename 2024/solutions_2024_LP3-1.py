@@ -183,7 +183,6 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
         
         table += "\n" # Lägger till tomrad mellan kontinenter
 
-    # Skriv ut tabellen
     print(table)
 
 
@@ -202,7 +201,7 @@ def plot_inflation(df_inflation, df_regions):
     frequency_input = input("Ange vilken frequency du vill analysera: ")
     measure_input = input("Ange vilken measure du vill analysera: ")
     
-    # Filter data based on user input
+    # Filtrera användarinput
     df_filtered = df_inflation[
         (df_inflation['COUNTRY'].str.upper() == country_input.upper()) &
         (df_inflation['SUBJECT'].str.upper() == subject_input.upper()) &
@@ -210,49 +209,46 @@ def plot_inflation(df_inflation, df_regions):
         (df_inflation['MEASURE'].str.upper() == measure_input.upper())
     ]
     
-    # Sort by 'TIME' to ensure correct order in the plot
+    # Sortera efter tid
     df_filtered = df_filtered.sort_values(by='TIME')
 
-    # Find the five highest and lowest values
+    # Hitta de 5 högsta och lägsta värdena
     top_5 = df_filtered.nlargest(5, 'Value')
     bottom_5 = df_filtered.nsmallest(5, 'Value')
     
-    # Create a color map for the top and bottom values
-    # Create a color map for the top and bottom values without using get_cmap
+    # Skapa colormap för högsta och lägst värdena
     cmap = colormaps['hsv']
     colors_top = [cmap(i / 10) for i in range(5)]
     colors_bottom = [cmap((i + 5) / 10) for i in range(5)]
 
-    # Plot the line chart
+    # Plotta linjediagram
     plt.figure(figsize=(14, 7))
     plt.plot(df_filtered['TIME'], df_filtered['Value'], label='Inflation', marker='', color='blue', linestyle='-')
 
-    # Plot and label the top 5 highest inflation points with unique colors
+    # Plotta 5 högsta värdena med unika färger
     for i, (time, value) in enumerate(zip(top_5['TIME'], top_5['Value'])):
         plt.scatter(time, value, color=colors_top[i], label=f'Högsta {time}', zorder=5)
 
-    # Plot and label the bottom 5 lowest inflation points with unique colors
+    # Samma med de 5 lägsta
     for i, (time, value) in enumerate(zip(bottom_5['TIME'], bottom_5['Value'])):
         plt.scatter(time, value, color=colors_bottom[i], label=f'Lägsta {time}', zorder=5)
 
-    # Add title and labels with the frequency input included
     plt.title(f'Inflation for {country_input} - {subject_input} - {frequency_input} - {measure_input}')
     plt.xlabel('År')
     plt.ylabel('Inflation (%)')
 
-    # Create a custom legend
+    # Skapa legend som visar vilken färg som tillhör vad
     legend_elements = [Line2D([0], [0], color='blue', label='Inflation')]
     legend_elements += [Line2D([0], [0], marker='o', color='w', markerfacecolor=colors_top[i], label=f'Högsta {top_5["TIME"].iloc[i]}') for i in range(len(top_5))]
     legend_elements += [Line2D([0], [0], marker='o', color='w', markerfacecolor=colors_bottom[i], label=f'Lägsta {bottom_5["TIME"].iloc[i]}') for i in range(len(bottom_5))]
 
     plt.legend(handles=legend_elements, loc='best', ncol=2)
 
-    # Enhance the plot aesthetics
+    # Förbättra det visuella
     plt.grid(True)
     plt.xticks(rotation=90)
     plt.tight_layout()
 
-    # Show the plot
     plt.show()
 
 # Main funktion för att köra koden till uppgifter 2-5

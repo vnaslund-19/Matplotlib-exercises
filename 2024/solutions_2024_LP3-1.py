@@ -140,8 +140,7 @@ def analyze_inflation_by_year(df, year):
 # Skriv din kod här:
 
 def analyze_inflation_by_continent(df_cpi, df_regions):
-    # Konvertera årskolumner till numerisk typ och smält dataframe till ett långt format och
-    # Omvandla 'wide' format data (en kolumn per år) till 'long' format (en rad per år och landskod)
+    # Konvertera årskolumner till numerisk typ och smält dataframe till ett långt format
     years = [str(year) for year in range(1960, 2023)]
     df_cpi_long = df_cpi.melt(id_vars='Landskod', value_vars=years, var_name='År', value_name='Inflation')
     df_cpi_long['Inflation'] = pd.to_numeric(df_cpi_long['Inflation'], errors='coerce')
@@ -150,27 +149,40 @@ def analyze_inflation_by_continent(df_cpi, df_regions):
     # Sammanfoga df_cpi_long och df_regions för att inkludera 'Land' och 'Kontinent'
     df_merged = pd.merge(df_cpi_long, df_regions, on='Landskod')
 
-    # Beräkna medelinflationen per kontinent
-    mean_inflation = df_merged.groupby('Kontinent')['Inflation'].mean().reset_index(name='Kontinent avg[%]')
+    # Beräkna medelinflation per kontinent
+    continent_means = df_merged.groupby('Kontinent')['Inflation'].mean().reset_index()
+    continent_means['Inflation'] = continent_means['Inflation'].round(1)
 
-    # Hitta de tre högsta och lägsta inflationerna per kontinent
-    top_inflations = df_merged.sort_values('Inflation', ascending=False).groupby('Kontinent').head(3)
-    bottom_inflations = df_merged.sort_values('Inflation').groupby('Kontinent').head(3)
+    # Hitta topp 3 högsta och lägsta inflationer per kontinent och år
+    top3 = df_merged.groupby('Kontinent')['Inflation'].nlargest(3).reset_index()
+    top3_extreme = df_merged.loc[top3['level_1']]
+    bottom3 = df_merged.groupby('Kontinent')['Inflation'].nsmallest(3).reset_index()
+    bottom3_extreme = df_merged.loc[bottom3['level_1']]
 
-    # Sammanfoga dessa med mean_inflation för att få en enda dataframe
-    extremes = pd.concat([top_inflations, bottom_inflations], axis=0)
+    # Skapa en tabell för presentation
+    table = ""
 
-    # Sortera för att få en snygg output
-    extremes_sorted = extremes.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False])
-    
-    # Skapa en output dataframe som inkluderar medelinflationen för kontinenten
-    output = pd.merge(mean_inflation, extremes_sorted, on='Kontinent', how='outer')
+    indentation = ' ' * 20
+    for continent in continent_means['Kontinent']:
+        mean_inflation = continent_means.loc[continent_means['Kontinent'] == continent, 'Inflation'].item()
+        table += f"{indentation}{continent}\n"
+        table += f"{'Kontinent avg[%]:':<10} {mean_inflation}\n"
+        table += f"{indentation}Högsta 3\n"
+        table += f"{'Land':<35} {'År':<6} {'Inf[%]':<8}\n"
 
-    # Sortera och organisera kolumnerna
-    output = output[['Kontinent', 'Land', 'År', 'Inflation', 'Kontinent avg[%]']]
-    output.sort_values(by=['Kontinent', 'Inflation'], ascending=[True, False], inplace=True)
-    
-    print(output.to_string(index=False))
+        # 3 högsta inflationer
+        for _, row in top3_extreme[top3_extreme['Kontinent'] == continent].iterrows():
+            table += f"{row['Land']:<35} {row['År']:<6} {row['Inflation']:.1f}\n"
+
+        # 3 lägsta inflationer
+        table += f"{indentation}Lägsta 3\n"
+        for _, row in bottom3_extreme[bottom3_extreme['Kontinent'] == continent].iterrows():
+            table += f"{row['Land']:<35} {row['År']:<6} {row['Inflation']:.1f}\n"
+        
+        table += "\n" # Lägger till tomrad mellan kontinenter
+
+    # Skriv ut tabellen
+    print(table)
 
 
 # ------------------------------------------------------------------------------------------------------------------------

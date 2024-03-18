@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ------------ Uppgift A ------------
-
 def f(x, y):
     return x**2 + y**2
 

@@ -2,6 +2,7 @@
 # ----------
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 # ------------ Uppgift A ------------
 df_cia_factbook = pd.read_csv('cia_factbook.csv', sep=';')
@@ -20,7 +21,7 @@ def plot_countries(num_or_country):
     elif num_or_country.endswith('-'):
         num = int(num_or_country[:-1])
         sorted_df = df_cia_factbook.sort_values(by='density', ascending=True).head(num)
-    else:
+    else: #Skriv ut ett specifikt land
         country_density = df_cia_factbook.loc[df_cia_factbook['country'].str.lower() == num_or_country.lower(), 'density']
         if not country_density.empty:
             print(f"Befolkningstäthet för {num_or_country}: {country_density.values[0]} inv/km2")
@@ -60,26 +61,69 @@ user_input = get_user_input()
 plot_countries(user_input)
 
 print("\n# --------- Uppgift C ---------")
-def menu_option_1(df):
-    medel_population = df['population'].mean()
-    medel_area = df['area'].mean()
-    
-    filtered_df = df[(df['population'] > medel_population) &
-                     (df['area'] < medel_area) &
-                     (df['birth_rate'].between(15, 24)) &
-                     (df['life_exp_at_birth'] > 70)]
-    
-    filtered_df = filtered_df[['country', 'area', 'birth_rate', 'life_exp_at_birth']]
-    print(filtered_df.to_string(index=False))
+def menu_option_1():
+    filtered_countries = df_cia_factbook[(df_cia_factbook['population'] > df_cia_factbook['population'].mean()) &
+                                          (df_cia_factbook['area'] < df_cia_factbook['area'].mean()) &
+                                          (df_cia_factbook['birth_rate'].between(15, 24)) &
+                                          (df_cia_factbook['life_exp_at_birth'] > 70)]
+    print(filtered_countries[['country', 'area', 'birth_rate', 'life_exp_at_birth']].to_string(index=False, float_format='{:0.0f}'.format))
 
-def menu_option_2(df):
-    df['internet_user_density'] = df['internet_users'] / (df['population'] / 100000)
+def menu_option_2():
+    # Skapar en ny kolumn internet_user_density som beräknar antalet internetanvändare per 100 000 invånare
+    df_cia_factbook['internet_user_density'] = df_cia_factbook['internet_users'] / (df_cia_factbook['population'] / 100000)
+    filtered_countries = df_cia_factbook.dropna(subset=['internet_user_density'])
+    smallest = filtered_countries.nsmallest(5, 'internet_user_density')
+    largest = filtered_countries.nlargest(5, 'internet_user_density')
     
-    lowest_density = df.nsmallest(5, 'internet_user_density')[['country', 'population', 'internet_user_density']]
-    highest_density = df.nlargest(5, 'internet_user_density')[['country', 'population', 'internet_user_density']]
+    print("{:<35} {:<15} {:<30}".format("Land", "Folkmängd", "Internetanvändare [per 100k]"))
+    print("-" * 75)
+
+    print("Länder med lägst antal internetanvändare per 100.000 invånare:")
+    for _, row in smallest.iterrows():
+        print(f"{row['country']:<35} {row['population']:<15.0f} {row['internet_user_density']:<30.1f}")
+
+    print("\nLänder med högst antal internetanvändare per 100.000 invånare:")
+    for _, row in largest.iterrows():
+        print(f"{row['country']:<35} {row['population']:<15.0f} {row['internet_user_density']:<30.1f}")
+
+
+def menu_option_3():
+    # Beräknar befolkningsförändringshastigheten
+    df_cia_factbook['population_growth_rate'] = df_cia_factbook['birth_rate'] - df_cia_factbook['death_rate'] + df_cia_factbook['net_migration_rate']
+
+    # Beräknar den absoluta befolkningsförändringen
+    df_cia_factbook['population_change'] = (df_cia_factbook['population_growth_rate'] / 1000) * df_cia_factbook['population']
+    filtered_countries = df_cia_factbook.dropna(subset=['population_change'])
+    largest_pos = filtered_countries.nlargest(5, 'population_change').sort_values('population_change', ascending=False)
+    smallest_neg = filtered_countries.nsmallest(5, 'population_change').sort_values('population_change', ascending=True)
     
-    combined_df = pd.concat([lowest_density, highest_density])
-    print(combined_df.to_string(index=False))
+    print("{:<30} {:<15} {:<15} {:<20} {:<30}".format("Land", "Födslar[per 1k]", "Döda[per 1k]", "Migration[per 1k]", "Befolkningsföränding[%]"))
+    print("-" * 95)
+
+    print("Länder med mest negativ befolkningstrend:")
+    for _, row in smallest_neg.iterrows():
+        print("{:<20} {:<15.0f} {:<15.0f} {:<20.0f} {:<30.2f}".format(row['country'], row['birth_rate'], row['death_rate'], row['net_migration_rate'], row['population_change']))
+
+    print("\nLänder med mest positiv befolkningstrend:")
+    for _, row in largest_pos.iterrows():
+        print("{:<20} {:<15.0f} {:<15.0f} {:<20.0f} {:<30.2f}".format(row['country'], row['birth_rate'], row['death_rate'], row['net_migration_rate'], row['population_change']))
+
+    plt.figure(figsize=(10, 6))
+    countries = list(smallest_neg['country']) + list(largest_pos['country'])
+    population_changes = list(smallest_neg['population_change']) + list(largest_pos['population_change'])
+    plt.bar(countries, population_changes, color=['red'] * 5 + ['blue'] * 5)
+    plt.grid(True)
+    plt.ylabel("Befolkningsförändring '%' av folkmängd")
+    plt.title('Länder med minst och störst befolkningsökning3')
+    plt.xticks(rotation=45, ha='right')
+
+    def percent_formatter(x, pos):
+        return f"{x/1000000:.1f}"  #Formatterar till %
+
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
+
+    plt.tight_layout()
+    plt.show()
 
 while True:
         print("\nHuvudmeny:")
@@ -91,11 +135,11 @@ while True:
         val = input("Välj ett alternativ (1-4): ")
         
         if val == '1':
-            menu_option_1(df_cia_factbook)
+            menu_option_1()
         elif val == '2':
-            menu_option_2(df_cia_factbook)
+            menu_option_2()
         elif val == '3':
-            menu_option_2(df_cia_factbook)
+            menu_option_3()
         elif val == '4':
             print("Avslutar programmet.")
             break

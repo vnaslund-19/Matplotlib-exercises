@@ -1,8 +1,9 @@
 # uppgift 1:
 # ---------- 
+import numpy as np
+import matplotlib.pyplot as plt
 
 # ------------ Uppgift A ------------
-import numpy as np
 
 def f(x, y):
     return x**2 + y**2
@@ -46,15 +47,26 @@ for i in range (10):
 
 print("\n# --------- Uppgift E ---------")
 max_107_NP_A = np.where(NP_A > 107, -100, NP_A)
-
 print(max_107_NP_A)
 
 print("\n# --------- Uppgift F ---------")
-
 # Skapa en lista där alla kvadrater av 0-9 repeteras 5 gånger
 base_numbers = np.arange(10)
 squared_repeated = np.repeat(base_numbers**2, 5)
 
+# Byter ut alla värden som slutar med 9 mot 112 för att uppnå det önskade resultatet
 NP_Arr = np.where(squared_repeated % 10 == 9, 112, squared_repeated)
-
 print(NP_Arr)
+
+# ------------ Uppgift G ------------
+polynomial_values = NP_Arr**2 + 10*NP_Arr + 5
+
+# Plotta linjediagrammet
+plt.figure(figsize=(10, 6))
+plt.plot(polynomial_values, '-o', label='NP_Arr Polynomial')
+plt.title('Graf över polynom (Uppgift G)')
+plt.xlabel('Index')
+plt.ylabel('Polynomvärden')
+plt.grid(True)
+plt.legend()
+plt.show()
